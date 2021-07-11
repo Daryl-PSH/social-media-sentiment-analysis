@@ -4,6 +4,7 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler, Stream
 import tweepy
 import pandas as pd
+from kafka import KafkaProducer
 
 import os
 from typing import List
@@ -15,6 +16,9 @@ CONSUMER_KEY = os.environ.get("CONSUMER_KEY")
 CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
 ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
+
+producer = KafkaProducer(bootstrap_servers="localhost:9092")
+topic_name = "twitter_data"
 
 
 class TwitterAuth:
@@ -52,7 +56,8 @@ class TweetsListener(StreamListener):
     """
 
     def on_data(self, data):
-        print(data)
+        producer.send(topic_name, str.encode(data))
+        return True
 
     def on_error(self, status):
         if status == 420:  # in the event of rate limiting
