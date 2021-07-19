@@ -1,8 +1,13 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame, Row
 from pyspark import SparkContext
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 import pyspark as spark
+import emoji
+import preprocessor as p
+
+from typing import List
+import string
 
 
 def setup_spark(app_name: str) -> SparkSession:
@@ -51,7 +56,7 @@ def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
         processed_df: Dataframe that has been converted and expanded
     """
     processed_df = df.withColumn("value", F.from_json("value", schema)).select(
-        F.col("value")
+        F.col("value.*")
     )
 
     return processed_df
@@ -84,5 +89,64 @@ def create_ticker_column(df: DataFrame) -> DataFrame:
 
     mapped_function = F.udf(extract_ticker, ArrayType(StringType()))
     processed_df = df.withColumn("ticker", mapped_function("text"))
+
+    return processed_df
+
+
+def convert_emoji_to_text(df: DataFrame) -> DataFrame:
+    """
+    Convert emojis in tweet to text
+
+    Args:
+        df (DataFrame): Dataframe to be processed
+
+    Returns:
+        processed_df (DataFrame): Dataframe where emoji have been converted
+    """
+    emoji_func = F.udf(emoji.demojize, StringType())
+    processed_df = df.withColumn("cleaned_text", emoji_func("text"))
+
+    return processed_df
+
+
+def preprocess_tweets(df: DataFrame) -> DataFrame:
+    """
+    Use the tweet-preprocessor library to preprocess tweets where it
+    helps to remove URL, reserved words such as @RT, hashtags, mentions
+
+    Args:
+        df (DataFrame): DataFrame to be preprocessed
+
+    Returns:
+        processed_df (DataFrame): Preprocessed Dataframe
+    """
+    preprocess_func = F.udf(p.clean, StringType())
+    processed_df = df.withColumn("cleaned_text", preprocess_func("cleaned_text"))
+
+    return processed_df
+
+
+def clean_punctuations_digits(df: DataFrame) -> DataFrame:
+    """
+    Remove punctuations and digits and replace "_" with space where could _ arise
+    from processing emojis
+
+    Args:
+        df (DataFrame): DataFrame to be preprocessed
+
+    Returns:
+        processed_df (DataFrame): Preprocessed Dataframe
+    """
+
+    def remove_punctuation_digits(row: Row):
+        remove_list = string.punctuation + string.digits
+        map_table = str.maketrans("", "", remove_list)
+
+        return row.translate(map_table)
+
+    df = df.withColumn("cleaned_text", F.regexp_replace("cleaned_text", "_", " "))
+
+    remove_punc = F.udf(remove_punctuation_digits, StringType())
+    processed_df = df.withColumn("cleaned_text", remove_punc("cleaned_text"))
 
     return processed_df
