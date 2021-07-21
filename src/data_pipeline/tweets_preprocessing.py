@@ -25,6 +25,27 @@ def setup_spark(app_name: str) -> SparkSession:
     return spark
 
 
+def preprocess_data(df: DataFrame) -> DataFrame:
+    """
+    Function that integrates all the preprocessing step
+
+    Args:
+        df (DataFrame): Raw dataframe that is streamed
+
+    Returns:
+        processed_df: Processed dataframe
+    """
+    schema = generate_schema()
+
+    processed_df = expand_column(df, schema)
+    processed_df = convert_emoji_to_text(processed_df)
+    processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
+    processed_df = create_ticker_column(processed_df)
+    processed_df = clean_punctuations_digits(processed_df)
+
+    return processed_df
+
+
 def generate_schema() -> StructType:
     """
     Generate the schema for the twitter topic
