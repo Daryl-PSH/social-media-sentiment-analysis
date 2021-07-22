@@ -8,6 +8,7 @@ import preprocessor as p
 
 from typing import List
 import string
+import uuid
 
 
 def setup_spark(app_name: str) -> SparkSession:
@@ -57,17 +58,31 @@ def generate_schema() -> StructType:
         schema: Schema for the dataframe columns
     """
 
-    schema = StructType(
-        [StructField("created_at", StringType()), StructField("text", StringType())]
-    )
+    schema = StructType([StructField("text", StringType())])
 
     return schema
+
+
+def generate_uuid(df: DataFrame) -> DataFrame:
+    """
+    Generate an Universally Unique Identifier (UUID) for each row of data
+    in the dataframe
+
+    Args:
+        df (DataFrame): Dataframe to generate a UUID for
+
+    Returns:
+        DataFrame: Dataframe with a new UUID column
+    """
+    uuid_udf = F.udf(lambda: str(uuid.uuid4()), StringType())
+
+    return df.withColumn("id", uuid_udf())
 
 
 def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
     """
     Convert and expand the json data in the "value" column to its respective column
-    in the dataframe
+    in the dataframe and convert timestamp column to date column
 
     Args:
         df (DataFrame): Dataframe to be processed
@@ -79,6 +94,7 @@ def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
     processed_df = df.withColumn("value", F.from_json("value", schema)).select(
         F.col("value.*")
     )
+    processed_df = processed_df.withColumn("timestamp", df["timestamp"].cast("date"))
 
     return processed_df
 
@@ -161,7 +177,8 @@ def clean_punctuations_digits(df: DataFrame) -> DataFrame:
 
     def remove_punctuation_digits(row: Row):
         remove_list = string.punctuation + string.digits
-        map_table = str.maketrans("", "", remove_list)
+        mapping = {k: " " for k in remove_list}
+        map_table = str.maketrans(mapping)
 
         return row.translate(map_table)
 
@@ -169,5 +186,23 @@ def clean_punctuations_digits(df: DataFrame) -> DataFrame:
 
     remove_punc = F.udf(remove_punctuation_digits, StringType())
     processed_df = df.withColumn("cleaned_text", remove_punc("cleaned_text"))
+    processed_df = generate_uuid(processed_df)
 
+    return processed_df
+
+
+def explode_ticker_column(df: DataFrame) -> DataFrame:
+    """
+    For tweets that mention multiple relevant ticker, explode the ticker list
+
+    Args:
+        df (DataFrame): Dataframe to be processed
+
+    Returns:
+        processed_df (DataFrame): Processed dataframe where ticker is no longer a list
+    """
+
+    processed_df = df.select(
+        "timestamp", "text", F.explode(df["ticker"]).alias("ticker")
+    )
     return processed_df
