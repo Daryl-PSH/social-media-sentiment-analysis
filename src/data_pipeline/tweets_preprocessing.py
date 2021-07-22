@@ -92,7 +92,7 @@ def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
         processed_df: Dataframe that has been converted and expanded
     """
     processed_df = df.withColumn("value", F.from_json("value", schema)).select(
-        F.col("value.*")
+        [F.col("value.*"), "timestamp"]
     )
     processed_df = processed_df.withColumn("timestamp", df["timestamp"].cast("date"))
 
@@ -121,7 +121,9 @@ def create_ticker_column(df: DataFrame) -> DataFrame:
         Returns:
             tickers (List[str]): List of ticker that has been mentioned in the tweet
         """
-        tickers = [word[1:] for word in row.split() if word.startswith("$")]
+        tickers = [
+            word[1:] for word in row.split() if word.startswith("$") and word.isalpha()
+        ]
         return tickers
 
     mapped_function = F.udf(extract_ticker, ArrayType(StringType()))

@@ -7,6 +7,7 @@ import pandas as pd
 from kafka import KafkaProducer
 
 import os
+import json
 from typing import List
 
 load_dotenv(find_dotenv())  # Load secret keys and bearer token
@@ -56,7 +57,14 @@ class TweetsListener(StreamListener):
     """
 
     def on_data(self, data):
-        producer.send(topic_name, str.encode(data))
+        json_data = json.loads(data)
+
+        data = {
+            key: json_data[key]
+            for key in json_data.keys()
+            if key in ["created_at", "text"]
+        }
+        producer.send(topic_name, json.dumps(data).encode("utf-8"))
         return True
 
     def on_error(self, status):
