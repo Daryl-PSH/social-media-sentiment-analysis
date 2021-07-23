@@ -43,6 +43,8 @@ def preprocess_data(df: DataFrame) -> DataFrame:
     processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
     processed_df = create_ticker_column(processed_df)
     processed_df = clean_punctuations_digits(processed_df)
+    processed_df = explode_ticker_column(processed_df)
+    processed_df = generate_uuid(processed_df)
 
     return processed_df
 
