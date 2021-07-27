@@ -40,8 +40,8 @@ def preprocess_data(df: DataFrame) -> DataFrame:
 
     processed_df = expand_column(df, schema)
     processed_df = convert_emoji_to_text(processed_df)
-    processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
     processed_df = create_ticker_column(processed_df)
+    processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
     processed_df = clean_punctuations_digits(processed_df)
     processed_df = explode_ticker_column(processed_df)
     processed_df = generate_uuid(processed_df)
@@ -77,8 +77,8 @@ def generate_uuid(df: DataFrame) -> DataFrame:
         DataFrame: Dataframe with a new UUID column
     """
     uuid_udf = F.udf(lambda: str(uuid.uuid4()), StringType())
-
-    return df.withColumn("id", uuid_udf())
+    uuid_df = df.withColumn("id", uuid_udf())
+    return uuid_df
 
 
 def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
@@ -124,7 +124,9 @@ def create_ticker_column(df: DataFrame) -> DataFrame:
             tickers (List[str]): List of ticker that has been mentioned in the tweet
         """
         tickers = [
-            word[1:] for word in row.split() if word.startswith("$") and word.isalpha()
+            word[1:]
+            for word in row.split()
+            if word.startswith("$") and word[1:].isalpha()
         ]
         return tickers
 
@@ -145,7 +147,7 @@ def convert_emoji_to_text(df: DataFrame) -> DataFrame:
         processed_df (DataFrame): Dataframe where emoji have been converted
     """
     emoji_func = F.udf(emoji.demojize, StringType())
-    processed_df = df.withColumn("cleaned_text", emoji_func("text"))
+    processed_df = df.withColumn("cleaned_tweet", emoji_func("text"))
 
     return processed_df
 
@@ -162,7 +164,7 @@ def preprocess_tweets(df: DataFrame) -> DataFrame:
         processed_df (DataFrame): Preprocessed Dataframe
     """
     preprocess_func = F.udf(p.clean, StringType())
-    processed_df = df.withColumn("cleaned_text", preprocess_func("cleaned_text"))
+    processed_df = df.withColumn("cleaned_tweet", preprocess_func("cleaned_tweet"))
 
     return processed_df
 
@@ -179,18 +181,27 @@ def clean_punctuations_digits(df: DataFrame) -> DataFrame:
         processed_df (DataFrame): Preprocessed Dataframe
     """
 
-    def remove_punctuation_digits(row: Row):
+    def remove_punctuation_digits(row: Row) -> Row:
+        """
+        Create a translation table where punctuations are replaced by white spaces
+        and stripping excessive white spaces at the end
+
+        Args:
+            row (Row): Row of a DataFrame
+
+        Returns:
+            (Row): Preprocessed row
+        """
         remove_list = string.punctuation + string.digits
         mapping = {k: " " for k in remove_list}
         map_table = str.maketrans(mapping)
+        row = row.translate(map_table)
+        return " ".join(row.split())
 
-        return row.translate(map_table)
-
-    df = df.withColumn("cleaned_text", F.regexp_replace("cleaned_text", "_", " "))
+    df = df.withColumn("cleaned_tweet", F.regexp_replace("cleaned_tweet", "_", " "))
 
     remove_punc = F.udf(remove_punctuation_digits, StringType())
-    processed_df = df.withColumn("cleaned_text", remove_punc("cleaned_text"))
-    processed_df = generate_uuid(processed_df)
+    processed_df = df.withColumn("cleaned_tweet", remove_punc("cleaned_tweet"))
 
     return processed_df
 
@@ -206,7 +217,5 @@ def explode_ticker_column(df: DataFrame) -> DataFrame:
         processed_df (DataFrame): Processed dataframe where ticker is no longer a list
     """
 
-    processed_df = df.select(
-        "timestamp", "text", F.explode(df["ticker"]).alias("ticker")
-    )
+    processed_df = df.withColumn("ticker", F.explode("ticker"))
     return processed_df
