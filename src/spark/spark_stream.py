@@ -7,6 +7,14 @@ sc.addPyFile("src/data_pipeline/tweets_preprocessing.py")
 
 from tweets_preprocessing import *
 
+
+def write_to_cassandra(df, epoch_id):
+    print(f"Writing to Cassandra {epoch_id}")
+    df.write.format("org.apache.spark.sql.cassandra").options(
+        table="tweets", keyspace="social_media"
+    ).mode("append").save()
+
+
 if __name__ == "__main__":
 
     spark = setup_spark("Tweet Data")
@@ -21,11 +29,10 @@ if __name__ == "__main__":
 
     processed_df = preprocess_data(df)
 
-    write_df = (
-        processed_df.writeStream.format("json")
-        .queryName("tweet_queries")
-        .option("path", "./new_json")
-        .option("checkpointLocation", "./new_check")
+    query = (
+        processed_df.writeStream.trigger(processingTime="5 seconds")
+        .outputMode("update")
+        .foreachBatch(write_to_cassandra)
         .start()
         .awaitTermination()
     )
