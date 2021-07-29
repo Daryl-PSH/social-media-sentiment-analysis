@@ -1,3 +1,5 @@
+from nltk import sentiment
+from nltk.sentiment import vader
 from pyspark.sql import SparkSession, DataFrame, Row
 from pyspark import SparkContext
 import pyspark.sql.functions as F
@@ -5,6 +7,8 @@ from pyspark.sql.types import *
 import pyspark as spark
 import emoji
 import preprocessor as p
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
 
 from typing import List
 import string
@@ -36,6 +40,8 @@ def preprocess_data(df: DataFrame) -> DataFrame:
     Returns:
         processed_df: Processed dataframe
     """
+    nltk.download("vader_lexicon")
+
     schema = generate_schema()
 
     processed_df = expand_column(df, schema)
@@ -45,6 +51,7 @@ def preprocess_data(df: DataFrame) -> DataFrame:
     processed_df = clean_punctuations_digits(processed_df)
     processed_df = explode_ticker_column(processed_df)
     processed_df = generate_uuid(processed_df)
+    processed_df = vader_prediction(processed_df)
 
     return processed_df
 
@@ -132,6 +139,22 @@ def create_ticker_column(df: DataFrame) -> DataFrame:
 
     mapped_function = F.udf(extract_ticker, ArrayType(StringType()))
     processed_df = df.withColumn("ticker", mapped_function("text"))
+
+    return processed_df
+
+
+def vader_prediction(df: DataFrame) -> DataFrame:
+    sid = SentimentIntensityAnalyzer()
+
+    def analyze_sentiment(row: Row) -> float:
+
+        ss = sid.polarity_scores(row)
+        compound_score = ss["compound"]
+
+        return compound_score
+
+    sentiment_function = F.udf(analyze_sentiment, FloatType())
+    processed_df = df.withColumn("sentiment_score", sentiment_function("cleaned_tweet"))
 
     return processed_df
 
