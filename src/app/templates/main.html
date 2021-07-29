@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %} Home Page {% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+
+    <form class="form-row" method="post">
+
+        <script>
+            var today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+            $('#startDate').datepicker({
+                uiLibrary: 'bootstrap4',
+                iconsLibrary: 'fontawesome',
+                format: "yyyy-mm-dd",
+                minDate: "",
+                maxDate: function () {
+                    return today;
+                }
+            });
+            $('#endDate').datepicker({
+                uiLibrary: 'bootstrap4',
+                iconsLibrary: 'fontawesome',
+                format: "yyyy-mm-dd",
+                minDate: function () {
+                    return $('#startDate').val();
+                },
+                maxDate: function () {
+                    return today;
+                }
+            });
+
+            $(".dropdown-menu li a").click(function () {
+                $(this).parents(".dropdown").find('.btn').html($(this).text() + ' <span class="caret"></span>');
+                $(this).parents(".dropdown").find('.btn').val($(this).data('value'));
+            });
+
+        </script>
+    </form>
+</div>
+
+<div class="chart" , id="random">
+    <script>
+        var random_graph = {{ random_chart | safe}};
+        Plotly.plot("sentiment", random_graph, {})
+    </script>
+</div>
+
+<div class="chart" , id="price">
+    <script>
+        var price_graph = {{ price_chart | safe}};
+        Plotly.plot("price", price_graph, {})
+    </script>
+</div>
+
+{% endblock %}
