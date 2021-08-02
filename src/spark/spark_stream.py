@@ -24,7 +24,7 @@ if __name__ == "__main__":
         .option("kafka.bootstrap.servers", "localhost:9092")
         .option("subscribe", "twitter_data")
         .load()
-        .selectExpr(["CAST(value AS STRING)", "CAST(timestamp AS STRING)"])
+        .selectExpr(["CAST(value AS STRING)"])
     )
 
     processed_df = preprocess_data(df)
@@ -36,3 +36,10 @@ if __name__ == "__main__":
         .start()
         .awaitTermination()
     )
+    # query = (
+    #     processed_df.writeStream.format("json")
+    #     .option("checkpointLocation", "./checkpoint")
+    #     .option("path", "./json")
+    #     .start()
+    #     .awaitTermination()
+    # )
