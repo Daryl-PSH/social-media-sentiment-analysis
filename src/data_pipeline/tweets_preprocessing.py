@@ -13,6 +13,9 @@ import nltk
 from typing import List
 import string
 import uuid
+from datetime import datetime
+import calendar
+from itertools import chain
 
 
 def setup_spark(app_name: str) -> SparkSession:
@@ -45,12 +48,13 @@ def preprocess_data(df: DataFrame) -> DataFrame:
     schema = generate_schema()
 
     processed_df = expand_column(df, schema)
+    processed_df = create_time_column(processed_df)
     processed_df = convert_emoji_to_text(processed_df)
     processed_df = create_ticker_column(processed_df)
     processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
     processed_df = clean_punctuations_digits(processed_df)
     processed_df = explode_ticker_column(processed_df)
-    processed_df = generate_uuid(processed_df)
+    # processed_df = generate_uuid(processed_df)
     processed_df = vader_prediction(processed_df)
 
     return processed_df
@@ -67,7 +71,9 @@ def generate_schema() -> StructType:
         schema: Schema for the dataframe columns
     """
 
-    schema = StructType([StructField("text", StringType())])
+    schema = StructType(
+        [StructField("text", StringType()), StructField("created_at", StringType())],
+    )
 
     return schema
 
@@ -101,9 +107,72 @@ def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
         processed_df: Dataframe that has been converted and expanded
     """
     processed_df = df.withColumn("value", F.from_json("value", schema)).select(
-        [F.col("value.*"), "timestamp"]
+        [F.col("value.*")]
     )
-    processed_df = processed_df.withColumn("timestamp", df["timestamp"].cast("date"))
+
+    return processed_df
+
+
+def create_time_column(df: DataFrame) -> DataFrame:
+    """
+    Create the year, month, day column for when the tweet is created
+    The date_created values will look similar to
+    Mon Aug 02 08:50:55 +0000 2021 --> Have to extract hour, minutes and seconds
+    separately from year, month and day
+
+    Args:
+        df (DataFrame): DataFrame to be preprocessed
+
+    Returns:
+        DataFrame: DataFrame with additional year, month and day column
+    """
+
+    def create_month_column(df: DataFrame) -> DataFrame:
+        """
+        Create the month column that indicates the month which the tweet was created
+
+        Args:
+            df (DataFrame)
+
+        Returns:
+            DataFrame: Processed dataFrame with month column
+        """
+        # Reverse mapping and create pyspark mapping table
+        months = {month: i for i, month in enumerate(calendar.month_abbr)}
+        month_expr = F.create_map([F.lit(x) for x in chain(*months.items())])
+        processed_df = df.withColumn("month", month_expr.getItem(split_col.getItem(1)))
+
+        return processed_df
+
+    def create_day_column(df: DataFrame) -> DataFrame:
+        """
+
+
+        Args:
+            df (DataFrame)
+
+        Returns:
+            DataFrame: Processed Dataframe with day column
+        """
+        # Extract day and add 1 so Monday starts at 1
+        days = {day: i for i, day in enumerate(calendar.day_abbr)}
+        day_expr = F.create_map([F.lit(x) for x in chain(*days.items())])
+        processed_df = df.withColumn("day", day_expr.getItem(split_col.getItem(0)) + 1)
+
+        return processed_df
+
+    split_col = F.split(df["created_at"], " ")
+
+    processed_df = df.withColumn("year", split_col.getItem(5))
+    processed_df = create_month_column(processed_df)
+    processed_df = create_day_column(processed_df)
+
+    hours_minutes_seconds = F.split(split_col.getItem(3), ":")
+    processed_df = processed_df.withColumn("hour", hours_minutes_seconds.getItem(0))
+    processed_df = processed_df.withColumn("minute", hours_minutes_seconds.getItem(1))
+    processed_df = processed_df.withColumn("second", hours_minutes_seconds.getItem(2))
+
+    processed_df = processed_df.drop("created_at")
 
     return processed_df
 
@@ -131,10 +200,11 @@ def create_ticker_column(df: DataFrame) -> DataFrame:
             tickers (List[str]): List of ticker that has been mentioned in the tweet
         """
         tickers = [
-            word[1:]
+            word[1:].upper()
             for word in row.split()
             if word.startswith("$") and word[1:].isalpha()
         ]
+
         return tickers
 
     mapped_function = F.udf(extract_ticker, ArrayType(StringType()))
