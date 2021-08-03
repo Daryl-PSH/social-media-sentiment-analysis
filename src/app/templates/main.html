@@ -4,53 +4,73 @@
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Dashboard</h1>
-
-    <form class="form-row" method="post">
-
-        <script>
-            var today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-            $('#startDate').datepicker({
-                uiLibrary: 'bootstrap4',
-                iconsLibrary: 'fontawesome',
-                format: "yyyy-mm-dd",
-                minDate: "",
-                maxDate: function () {
-                    return today;
-                }
-            });
-            $('#endDate').datepicker({
-                uiLibrary: 'bootstrap4',
-                iconsLibrary: 'fontawesome',
-                format: "yyyy-mm-dd",
-                minDate: function () {
-                    return $('#startDate').val();
-                },
-                maxDate: function () {
-                    return today;
-                }
-            });
-
-            $(".dropdown-menu li a").click(function () {
-                $(this).parents(".dropdown").find('.btn').html($(this).text() + ' <span class="caret"></span>');
-                $(this).parents(".dropdown").find('.btn').val($(this).data('value'));
-            });
-
-        </script>
-    </form>
 </div>
 
-<div class="chart" , id="random">
-    <script>
-        var random_graph = {{ random_chart | safe}};
-        Plotly.plot("sentiment", random_graph, {})
-    </script>
-</div>
+<canvas id="tweetChart" width="80" height="40"></canvas>
 
-<div class="chart" , id="price">
-    <script>
-        var price_graph = {{ price_chart | safe}};
-        Plotly.plot("price", price_graph, {})
-    </script>
-</div>
+
+
+<script>
+    var ctx = document.getElementById('tweetChart');
+    var ticker = {{ dataset.get_json()["ticker"] | safe }};
+    var count = {{ dataset.get_json()["count"] | safe }};
+
+    var data = {
+        labels: ticker,
+        datasets: [{
+            label: 'Tweets',
+            data: count,
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    }
+    var options = {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+
+    }
+
+    var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: options
+    });
+
+    // var getData = function () {
+    //     $.ajax({
+    //         url: '/stream_tweets',
+    //         type: 'GET',
+    //         success: function (data) {
+    //             // process your data to pull out what you plan to use to update the chart
+    //             // e.g. new label and a new data point
+
+    //             // add new label and data point to chart's underlying data structures
+    //             myChart.data.labels.pop();
+    //             myChart.data.datasets.forEach((dataset) => {
+    //                 dataset.data.pop();
+    //             });
+    //             myChart.update();
+    //         }
+    //     });
+    // };
+
+    // setInterval(getData, 3000);
+</script>
 
 {% endblock %}
