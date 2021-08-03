@@ -1,15 +1,18 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response, jsonify
 import pandas as pd
 import numpy as np
 import plotly.graph_objs as go
+import plotly.express as px
+import plotly
 import json
-
 from src.connect_cassandra import *
 from streamz.dataframe import PeriodicDataFrame
-from bokeh.embed import components
-from bokeh.models import ColumnDataSource, HoverTool, PrintfTickFormatter
-from bokeh.plotting import figure
-from bokeh.transform import factor_cmap
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from cassandra.query import dict_factory
+
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -17,24 +20,57 @@ app = Flask(__name__)
 session = connect_to_database("social_media")
 
 
-def random_datapoint(**kwargs):
-    return pd.DataFrame(
-        {"a": np.random.random(1), "b": np.random.random(1)},
-        index=[pd.Timestamp.now()],
+@app.route("/stream_tweets", methods=["GET"])
+def stream_tweets_sentiment():
+
+    sentiment = tweets.groupby(["ticker"]).agg(
+        {"sentiment_score": ["mean"], "cleaned_tweet": ["count"]}
     )
+    sentiment.columns = sentiment.columns.droplevel(0)
+
+    return jsonify(data=sentiment)
 
 
 @app.route("/", methods=["GET"])
 def homepage():
-    random_chart = create_plot()
-    return render_template("main.html", random_chart=random_chart)
+
+    ticker_list, sentiment_score, count = get_sentiment_data()
+
+    return render_template(
+        "main.html",
+        ticker_list=ticker_list,
+        sentiment_score=sentiment_score,
+        counter=count,
+    )
 
 
-def create_plot():
+def get_sentiment_data():
+    current_date = datetime.now()
 
-    df = PeriodicDataFrame(random_datapoint, interval="5s")
+    # Monday is first day of the week
+    year, month, day = current_date.year, current_date.month, current_date.day - 1
 
-    return df.hvplot(backlog=100)
+    query = (
+        f"""SELECT * FROM tweets WHERE year={year} AND month={month} AND day={day}"""
+    )
+
+    tweets = extract_data(session, query)
+
+    sentiment = tweets.groupby(["ticker"]).agg(
+        {"sentiment_score": ["mean"], "cleaned_tweet": ["count"]}
+    )
+    sentiment.columns = sentiment.columns.droplevel(0)
+    top_10 = sentiment.reset_index().nlargest(10, "count")[["ticker", "mean", "count"]]
+
+    ticker_list = list(top_10["ticker"])
+    sentiment_score = list(top_10["mean"].round(3))
+    count = list(top_10["count"])
+
+    # ticker_list = tweets["ticker"]
+    # sentiment_score = tweets["sentiment_score"]
+    # count = tweets["ticker"].value_counts()
+
+    return ticker_list, sentiment_score, count
 
 
 if __name__ == "__main__":
