@@ -23,24 +23,21 @@ session = connect_to_database("social_media")
 @app.route("/stream_tweets", methods=["GET"])
 def stream_tweets_sentiment():
 
-    sentiment = tweets.groupby(["ticker"]).agg(
-        {"sentiment_score": ["mean"], "cleaned_tweet": ["count"]}
-    )
-    sentiment.columns = sentiment.columns.droplevel(0)
+    ticker_list, sentiment_score, count = get_sentiment_data()
 
-    return jsonify(data=sentiment)
+    return jsonify(ticker_list)
 
 
 @app.route("/", methods=["GET"])
 def homepage():
 
-    ticker_list, sentiment_score, count = get_sentiment_data()
+    # ticker_list, sentiment_score, count = get_sentiment_data()
+
+    data = get_sentiment_data()
 
     return render_template(
         "main.html",
-        ticker_list=ticker_list,
-        sentiment_score=sentiment_score,
-        counter=count,
+        dataset=jsonify(data),
     )
 
 
@@ -66,11 +63,7 @@ def get_sentiment_data():
     sentiment_score = list(top_10["mean"].round(3))
     count = list(top_10["count"])
 
-    # ticker_list = tweets["ticker"]
-    # sentiment_score = tweets["sentiment_score"]
-    # count = tweets["ticker"].value_counts()
-
-    return ticker_list, sentiment_score, count
+    return {"ticker": ticker_list, "sentiment_score": sentiment_score, "count": count}
 
 
 if __name__ == "__main__":
