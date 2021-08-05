@@ -18,7 +18,6 @@
     var data = {
         labels: ticker,
         datasets: [{
-            label: 'Tweets',
             data: count,
             backgroundColor: [
                 'rgba(255, 99, 132, 0.2)',
@@ -52,25 +51,47 @@
         options: options
     });
 
-    // var getData = function () {
-    //     $.ajax({
-    //         url: '/stream_tweets',
-    //         type: 'GET',
-    //         success: function (data) {
-    //             // process your data to pull out what you plan to use to update the chart
-    //             // e.g. new label and a new data point
+    var getData = function () {
+        $.ajax({
+            url: '/stream_tweets',
+            type: 'GET',
+            dataType: "json",
+            success: function (update_data) {
+                var count = update_data["count"];
+                var label = update_data["ticker"];
+                // process your data to pull out what you plan to use to update the chart
+                // e.g. new label and a new data point
 
-    //             // add new label and data point to chart's underlying data structures
-    //             myChart.data.labels.pop();
-    //             myChart.data.datasets.forEach((dataset) => {
-    //                 dataset.data.pop();
-    //             });
-    //             myChart.update();
-    //         }
-    //     });
-    // };
+                // add new label and data point to chart's underlying data structures     }
+                var updatedDatasets = {
+                    data: count,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }
+                myChart.data.labels = label
+                myChart.data.datasets.pop()
+                myChart.data.datasets.push(updatedDatasets)
+                myChart.update();
+            }
+        });
+    };
 
-    // setInterval(getData, 3000);
+    setInterval(getData, 3000);
 </script>
 
 {% endblock %}

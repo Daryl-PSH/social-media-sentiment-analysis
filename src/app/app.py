@@ -23,9 +23,9 @@ session = connect_to_database("social_media")
 @app.route("/stream_tweets", methods=["GET"])
 def stream_tweets_sentiment():
 
-    ticker_list, sentiment_score, count = get_sentiment_data()
+    data = get_sentiment_data()
 
-    return jsonify(ticker_list)
+    return jsonify(data)
 
 
 @app.route("/", methods=["GET"])
