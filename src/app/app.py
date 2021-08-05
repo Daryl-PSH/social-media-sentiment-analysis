@@ -34,7 +34,6 @@ def homepage():
     # ticker_list, sentiment_score, count = get_sentiment_data()
 
     data = get_sentiment_data()
-
     return render_template(
         "main.html",
         dataset=jsonify(data),
@@ -45,7 +44,7 @@ def get_sentiment_data():
     current_date = datetime.now()
 
     # Monday is first day of the week
-    year, month, day = current_date.year, current_date.month, current_date.day - 1
+    year, month, day = current_date.year, current_date.month, current_date.day - 2
 
     query = (
         f"""SELECT * FROM tweets WHERE year={year} AND month={month} AND day={day}"""
