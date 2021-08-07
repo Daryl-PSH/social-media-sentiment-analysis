@@ -6,41 +6,40 @@
     <h1 class="h2">Dashboard</h1>
 </div>
 
-<canvas id="tweetChart" width="80" height="40"></canvas>
+
+<canvas id="tweetChart" height="30px" width="60px"></canvas>
+
+
 
 
 
 <script>
-    var ctx = document.getElementById('tweetChart');
+    var ctx = document.getElementById('tweetChart').getContext('2d');
     var ticker = {{ dataset.get_json()["ticker"] | safe }};
     var count = {{ dataset.get_json()["count"] | safe }};
+    var backgroundColour = {{ dataset.get_json()["background_colour"] | safe }};
+    var borderColour = {{ dataset.get_json()["border_colour"] | safe }};
+    var myLegendContainer = document.getElementById("myChartLegend");
 
     var data = {
         labels: ticker,
         datasets: [{
             data: count,
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
+            backgroundColor: backgroundColour,
+            borderColor: borderColour,
             borderWidth: 1,
 
-        }]
+        }
+        ]
+
     }
     var options = {
         indexAxis: 'y',
+        plugins: {
+            legend: {
+                display: true
+            }
+        },
         scales: {
             y: {
                 title: {
@@ -62,9 +61,12 @@
                     }
                 }
             }
-        }
+        },
+
+
 
     }
+
 
     var myChart = new Chart(ctx, {
         type: 'bar',
@@ -80,39 +82,33 @@
             success: function (update_data) {
                 var count = update_data["count"];
                 var label = update_data["ticker"];
+                var backgroundColor = update_data["background_colour"];
+                var borderColor = update_data["border_colour"];
                 // process your data to pull out what you plan to use to update the chart
                 // e.g. new label and a new data point
 
                 // add new label and data point to chart's underlying data structures     }
                 var updatedDatasets = {
                     data: count,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
                     borderWidth: 1
                 }
                 myChart.data.labels = label
                 myChart.data.datasets.pop()
                 myChart.data.datasets.push(updatedDatasets)
-                myChart.update();
+                myChart.update("resize");
+                console.log(update_data["count"])
             }
         });
     };
+    var myLegendContainer = document.getElementById("myChartLegend");
 
-    setInterval(getData, 10000);
+    $("#chartjs-legend").html(myChart.generateLegend());
+
+
+    // setInterval(getData, 1000);
+
 </script>
 
 {% endblock %}
