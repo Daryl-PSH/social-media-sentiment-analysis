@@ -1,18 +1,13 @@
 from flask import Flask, render_template, request, Response, jsonify
 import pandas as pd
 import numpy as np
-import plotly.graph_objs as go
-import plotly.express as px
-import plotly
 import json
 from src.connect_cassandra import *
-from streamz.dataframe import PeriodicDataFrame
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from cassandra.query import dict_factory
 
 import time
 from datetime import datetime
+from typing import List, Tuple
 
 app = Flask(__name__)
 
@@ -62,7 +57,46 @@ def get_sentiment_data():
     sentiment_score = list(top_10["mean"].round(3))
     count = list(top_10["count"])
 
-    return {"ticker": ticker_list, "sentiment_score": sentiment_score, "count": count}
+    border_colour, background_colour = classify_sentiment_scores(sentiment_score)
+
+    return {
+        "ticker": ticker_list,
+        "sentiment_score": sentiment_score,
+        "count": count,
+        "border_colour": border_colour,
+        "background_colour": background_colour,
+    }
+
+
+def classify_sentiment_scores(
+    sentiment_score: List[float],
+) -> Tuple[List[str], List[str]]:
+    """
+    Classify the sentiment score to three bucket where a sentiment score of above 0.3
+    is green, below -0.3 is red and anything in between is light brown
+
+    Args:
+        sentiment_score (List[float]): Sentiment score for the respective tickers
+
+    Returns:
+        border_colour (List[str]) : colour in rgba format string
+        background_colour (List[str]) colour in rgba format string
+    """
+    background_colour = []
+    border_colour = []
+
+    for sentiment in sentiment_score:
+        if sentiment >= 0.3:
+            border_colour.append("rgba(0, 255, 0, 1)")
+            background_colour.append("rgba(0, 255, 0, 0.2)")
+        elif sentiment <= -0.3:
+            border_colour.append("rgba(255, 0, 0, 1)")
+            background_colour.append("rgba(255, 0, 0, 0.2)")
+        else:
+            border_colour.append("rgba(202, 179, 136, 1)")
+            background_colour.append("rgba(202, 179, 136, 0.2)")
+
+    return (background_colour, border_colour)
 
 
 if __name__ == "__main__":
