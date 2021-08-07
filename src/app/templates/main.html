@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %} Home Page {% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+<div class="d-flex">
+    <ul class="list-group list-group-horizontal" justify-content-center>
+        <li class="list-group-item" style="color:#00FF00">Positive</li>
+        <li class="list-group-item" style="color:#CAB388">Neutral</li>
+        <li class="list-group-item" style="color:#FF0000">Negative</li>
+    </ul>
+</div>
+<canvas id="tweetChart" height="30px" width="60px"></canvas>
+
+
+
+
+
+<script>
+    var ctx = document.getElementById('tweetChart').getContext('2d');
+    var ticker = {{ dataset.get_json()["ticker"] | safe }};
+    var count = {{ dataset.get_json()["count"] | safe }};
+    var backgroundColour = {{ dataset.get_json()["background_colour"] | safe }};
+    var borderColour = {{ dataset.get_json()["border_colour"] | safe }};
+
+
+    var data = {
+        labels: ticker,
+        datasets: [{
+            data: count,
+            backgroundColor: backgroundColour,
+            borderColor: borderColour,
+            borderWidth: 1,
+
+        },]
+
+    }
+    var options = {
+        indexAxis: 'y',
+        plugins: {
+            legend: {
+                display: false,
+                onClick: (e) => e.stopPropagation()
+            }
+        },
+        scales: {
+            y: {
+                title: {
+                    display: true,
+                    text: "Ticker",
+                    align: "center",
+                    font: {
+                        size: 30
+                    }
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: "Count",
+                    align: "center",
+                    font: {
+                        size: 30
+                    }
+                }
+            }
+        },
+
+
+
+    }
+
+
+    var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: options
+    });
+
+    var getData = function () {
+        $.ajax({
+            url: '/stream_tweets',
+            type: 'GET',
+            dataType: "json",
+            success: function (update_data) {
+                var count = update_data["count"];
+                var label = update_data["ticker"];
+                var backgroundColor = update_data["background_colour"];
+                var borderColor = update_data["border_colour"];
+                // process your data to pull out what you plan to use to update the chart
+                // e.g. new label and a new data point
+
+                // add new label and data point to chart's underlying data structures     }
+                var updatedDatasets = {
+                    data: count,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    borderWidth: 1
+                }
+                myChart.data.labels = label
+                myChart.data.datasets.pop()
+                myChart.data.datasets.push(updatedDatasets)
+                myChart.update("resize");
+                console.log(update_data["count"])
+            }
+        });
+    };
+
+
+
+    setInterval(getData, 1000);
+
+</script>
+
+{% endblock %}
