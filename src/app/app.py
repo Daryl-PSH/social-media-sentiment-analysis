@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, Response, jsonify
 import pandas as pd
 import numpy as np
 import json
-from src.connect_cassandra import *
+from src.app.connect_cassandra import *
 from cassandra.query import dict_factory
 
 import time
