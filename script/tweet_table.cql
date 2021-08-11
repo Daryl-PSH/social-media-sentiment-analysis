@@ -15,5 +15,6 @@ CREATE TABLE tweets (
     ticker text,
     sentiment_score float,
     cleaned_tweet text,
+    text text,
     PRIMARY KEY((year, month, day), hour, minute, second, cleaned_tweet))
     WITH CLUSTERING ORDER BY(hour DESC, minute DESC, second DESC);
