@@ -1,4 +1,3 @@
-
 CREATE KEYSPACE social_media
 WITH REPLICATION = {
     'class': 'SimpleStrategy', 'replication_factor': 1
@@ -15,7 +14,6 @@ CREATE TABLE tweets (
     second int,
     ticker text,
     sentiment_score float,
-    cleaned_text text,
-    PRIMARY KEY((year, month, day), hour, minute, second, cleaned_text)
-    WITH CLUSTERING ORDER BY(hour DESC, minute DESC, second DESC)
-);
+    cleaned_tweet text,
+    PRIMARY KEY((year, month, day), hour, minute, second, cleaned_tweet))
+    WITH CLUSTERING ORDER BY(hour DESC, minute DESC, second DESC);
