@@ -20,16 +20,19 @@ services:
       - tweets
     depends_on:
       - zookeeper
+    ports:
+      - "19092:19092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092, CONNECTIONS_FROM_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   client:
     build: 
         context: .
-        dockerfile: dockerfiles/Dockerfile
+        dockerfile: dockerfiles/ProducerDockerfile
     container_name: tweet_producer
     depends_on: 
       - broker
@@ -50,3 +53,5 @@ services:
         sleep 30
         # Run the client code
         python src/data_extractor/twitter/tweet_producer.py
+
+
