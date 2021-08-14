@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     df = (
         spark.readStream.format("kafka")
-        .option("kafka.bootstrap.servers", "localhost:9092")
+        .option("kafka.bootstrap.servers", "localhost:19092")
         .option("subscribe", "twitter_data")
         .load()
         .selectExpr(["CAST(value AS STRING)"])
@@ -36,6 +36,7 @@ if __name__ == "__main__":
         .start()
         .awaitTermination()
     )
+
     # query = (
     #     processed_df.writeStream.format("json")
     #     .option("checkpointLocation", "./checkpoint")

@@ -1,0 +1,56 @@
+version: '3.5'
+
+networks: 
+  tweets:
+    name: tweets
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.5.0
+    container_name: zookeeper
+    networks: 
+      - tweets
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  broker:
+    image: confluentinc/cp-kafka:5.5.0
+    container_name: broker
+    networks: 
+      - tweets
+    depends_on:
+      - zookeeper
+    ports:
+      - "19092:19092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092, CONNECTIONS_FROM_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  client:
+    build: 
+        context: .
+        dockerfile: dockerfiles/ProducerDockerfile
+    container_name: tweet_producer
+    depends_on: 
+      - broker
+    networks: 
+      - tweets
+    environment:
+      BEARER_TOKEN: $BEARER_TOKEN
+      CONSUMER_KEY: $CONSUMER_KEY
+      CONSUMER_SECRET: $CONSUMER_SECRET
+      ACCESS_TOKEN: $ACCESS_TOKEN
+      ACCESS_TOKEN_SECRET: $ACCESS_TOKEN_SECRET
+    restart: on-failure
+    entrypoint: 
+      - bash 
+      - -c 
+      - |
+        echo 'Giving Kafka a bit of time to start up…'
+        sleep 30
+        # Run the client code
+        python src/data_extractor/twitter/tweet_producer.py
+  

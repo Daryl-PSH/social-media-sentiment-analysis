@@ -4,6 +4,7 @@ import numpy as np
 import json
 from src.app.connect_cassandra import *
 from cassandra.query import dict_factory
+from cassandra.cluster import Cluster, Session
 
 import time
 from datetime import datetime
@@ -12,8 +13,8 @@ from typing import List, Tuple
 app = Flask(__name__)
 
 # Connect to database upon loading
-session = connect_to_database("social_media")
-
+cluster = Cluster()
+session = cluster.connect("social_media")
 
 @app.route("/stream_tweets", methods=["GET"])
 def stream_tweets_sentiment():
@@ -33,17 +34,25 @@ def homepage():
     )
 
 
+def pandas_factory(colnames, rows):
+    """
+    Return Cassandra query as Pandas DataFrame
+    """
+    return pd.DataFrame(rows, columns=colnames)
+
+
 def get_sentiment_data():
     current_date = datetime.now()
 
     # Monday is first day of the week
-    year, month, day = current_date.year, current_date.month, current_date.day - 1
+    year, month, day = current_date.year, current_date.month, current_date.weekday()
 
     query = (
         f"""SELECT * FROM tweets WHERE year={year} AND month={month} AND day={day}"""
     )
-
-    tweets = extract_data(session, query)
+    session.row_factory = pandas_factory
+    session.default_fetch_size = None
+    tweets = session.execute(query)._current_rows
 
     sentiment = tweets.groupby(["ticker"]).agg(
         {"sentiment_score": ["mean"], "cleaned_tweet": ["count"]}
