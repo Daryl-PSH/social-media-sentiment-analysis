@@ -36,7 +36,7 @@ if __name__ == "__main__":
         .start()
         .awaitTermination()
     )
-    
+
     # query = (
     #     processed_df.writeStream.format("json")
     #     .option("checkpointLocation", "./checkpoint")

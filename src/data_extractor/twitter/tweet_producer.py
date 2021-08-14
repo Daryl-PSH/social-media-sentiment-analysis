@@ -4,7 +4,7 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler, Stream
 import tweepy
 import pandas as pd
-from kafka import KafkaProducer
+from confluent_kafka import Producer
 
 import os
 import json
@@ -18,7 +18,8 @@ CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
 ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
 
-producer = KafkaProducer(bootstrap_servers="localhost:9092")
+
+producer = Producer({"bootstrap.servers": "broker:9092"})
 topic_name = "twitter_data"
 
 
@@ -64,7 +65,8 @@ class TweetsListener(StreamListener):
             for key in json_data.keys()
             if key in ["created_at", "text"]
         }
-        producer.send(topic_name, json.dumps(data).encode("utf-8"))
+        print(data)
+        producer.produce(topic_name, json.dumps(data).encode("utf-8"))
         return True
 
     def on_error(self, status):

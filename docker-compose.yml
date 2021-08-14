@@ -53,5 +53,4 @@ services:
         sleep 30
         # Run the client code
         python src/data_extractor/twitter/tweet_producer.py
-
-
+  
