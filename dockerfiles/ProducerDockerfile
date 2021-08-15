@@ -9,5 +9,5 @@ RUN pip install -r requirements.txt
 
 COPY src/ src/
 
-CMD ["python", "src/data_extractor/twitter/tweet_producer.py"]
+CMD ["sh", "start_producer.sh"]
 
