@@ -4,6 +4,8 @@ This project analyses the top 250 tickers from the NASDAQ listing and generate s
 
 ## Pipeline
 
+![architecture diagram](image/architecture_diagram.png)
+
 The application works by pulling data from twitter using their developers API, tweets are then sent to Kafka for redistribution to the various consumers that require the data that the tweets topics container. For the real time dashboard, the data is preprocessed by Spark Structured Streaming which allows for batch computation on the real time data. This is where your standard text preprocessing comes into play such as cleaning of punctuation, classifying the tickers that each tweets are referring to etc. (Refer to src/data_pipeline/tweets_preprocessing.py for more granularity)
 
 The preprocessed data is then written to a Cassandra database. Cassandra is a column-centric. NoSQL database that have strong emphasis on availability and the ability to handle large amount of data which is crucial when dealing with real time streams of data. This is due to the lack of a single point of failure and replication function(although we are using a SimpleStrategy with 1 node.)
