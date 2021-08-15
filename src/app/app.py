@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, Response, jsonify
 import pandas as pd
 import numpy as np
 import json
-from src.app.connect_cassandra import *
 from cassandra.query import dict_factory
 from cassandra.cluster import Cluster, Session
 
@@ -45,7 +44,7 @@ def get_sentiment_data():
     current_date = datetime.now()
 
     # Monday is first day of the week
-    year, month, day = current_date.year, current_date.month, current_date.weekday()
+    year, month, day = current_date.year, current_date.month, current_date.weekday() + 1
 
     query = (
         f"""SELECT * FROM tweets WHERE year={year} AND month={month} AND day={day}"""
