@@ -5,9 +5,11 @@ RUN apt-get update
 WORKDIR social_media
 
 COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && \
+    rm requirements.txt
 
 COPY src/ src/
+COPY start_producer.sh start_producer.sh
 
 CMD ["sh", "start_producer.sh"]
 
