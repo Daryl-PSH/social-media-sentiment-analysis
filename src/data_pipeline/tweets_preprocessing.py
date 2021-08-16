@@ -54,7 +54,6 @@ def preprocess_data(df: DataFrame) -> DataFrame:
     processed_df = preprocess_tweets(processed_df)  # tweets specific preprocesing
     processed_df = clean_punctuations_digits(processed_df)
     processed_df = explode_ticker_column(processed_df)
-    # processed_df = generate_uuid(processed_df)
     processed_df = vader_prediction(processed_df)
 
     return processed_df
@@ -76,23 +75,6 @@ def generate_schema() -> StructType:
     )
 
     return schema
-
-
-def generate_uuid(df: DataFrame) -> DataFrame:
-    """
-    Generate an Universally Unique Identifier (UUID) for each row of data
-    in the dataframe
-
-    Args:
-        df (DataFrame): Dataframe to generate a UUID for
-
-    Returns:
-        DataFrame: Dataframe with a new UUID column
-    """
-    uuid_udf = F.udf(lambda: str(uuid.uuid4()), StringType())
-    uuid_df = df.withColumn("id", uuid_udf())
-    return uuid_df
-
 
 def expand_column(df: DataFrame, schema: StructType) -> DataFrame:
     """
